@@ -84,6 +84,16 @@ class ProductEndpointTests(unittest.TestCase):
         self.assertGreaterEqual(summary["total_views"], 1)
         self.assertGreaterEqual(summary["total_sales"], 1)
 
+    def test_analytics_query_returns_answer(self):
+        response = self.client.post(
+            "/analytics/query",
+            json={"question": "Give me an overall summary of product performance"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("answer", response.json())
+        self.assertIn("total_products", response.json()["summary"])
+
     def test_recorded_events_update_product_metrics(self):
         product = {"product_id": self.created_product_id, "name": "Event Product"}
         self.client.post("/products", json=product)

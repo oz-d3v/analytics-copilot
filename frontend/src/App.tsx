@@ -12,14 +12,22 @@ type Product = {
   name: string
 }
 
+type QueryResponse = {
+  answer: string
+  summary: Summary
+}
+
 const api = {
   summary: '/api/analytics/summary',
   products: '/api/products',
+  query: '/api/analytics/query',
 }
 
 function App() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [products, setProducts] = useState<Product[]>([])
+  const [question, setQuestion] = useState('Give me an overall summary of product performance')
+  const [answer, setAnswer] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -49,6 +57,31 @@ function App() {
     void load()
   }, [])
 
+  const handleAsk = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    try {
+      const response = await fetch(api.query, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to get an answer')
+      }
+
+      const data: QueryResponse = await response.json()
+      setAnswer(data.answer)
+    } catch (askError) {
+      setError(
+        askError instanceof Error ? askError.message : 'Could not process your question',
+      )
+    }
+  }
+
   return (
     <main className="dashboard">
       <header className="topbar">
@@ -58,9 +91,7 @@ function App() {
         </div>
       </header>
 
-      {error ? (
-        <div className="error">{error}</div>
-      ) : null}
+      {error ? <div className="error">{error}</div> : null}
 
       <section className="stats-grid">
         <article className="stat-card">
@@ -75,6 +106,23 @@ function App() {
           <span>Total sales</span>
           <strong>{summary?.total_sales ?? 0}</strong>
         </article>
+      </section>
+
+      <section className="panel ask-panel">
+        <div className="panel-header">
+          <h2>Ask the analytics assistant</h2>
+        </div>
+
+        <form onSubmit={handleAsk} className="ask-form">
+          <input
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            placeholder="Ask about sales, views, or product performance"
+          />
+          <button type="submit">Ask</button>
+        </form>
+
+        {answer ? <p className="assistant-answer">{answer}</p> : null}
       </section>
 
       <section className="panel">

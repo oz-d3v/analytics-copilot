@@ -1,10 +1,20 @@
+import json
+import os
 from contextlib import asynccontextmanager
 from typing import Literal
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from psycopg.errors import UniqueViolation
 from pydantic import BaseModel
+
+load_dotenv()
+
+try:
+	from openai import OpenAI
+except ImportError:
+	OpenAI = None
 
 from database import (
 	create_product,
@@ -24,6 +34,65 @@ class ProductCreate(BaseModel):
 
 class ProductEventCreate(BaseModel):
 	event_type: Literal["view", "sale"]
+
+
+class AnalyticsQuery(BaseModel):
+	question: str
+
+
+def build_analytics_answer(question: str, summary: dict) -> str:
+	q = question.lower()
+
+	if any(keyword in q for keyword in ["overall", "summary", "overview", "performance", "health"]):
+		return (
+			f"You currently have {summary['total_products']} products in the catalog, "
+			f"{summary['total_views']} total views, and {summary['total_sales']} sales. "
+			"This suggests the catalog is active, with measurable engagement and sales activity."
+		)
+	if "sales" in q:
+		return f"Sales are currently {summary['total_sales']} across the catalog."
+	if "view" in q:
+		return f"Product views total {summary['total_views']} across all products."
+	if "product" in q or "catalog" in q:
+		return f"The catalog currently contains {summary['total_products']} products."
+	return (
+		f"I can help with product count, views, and sales. Right now the totals are "
+		f"{summary['total_products']} products, {summary['total_views']} views, and {summary['total_sales']} sales."
+	)
+
+
+def get_model_answer(question: str, summary: dict) -> str:
+	api_key = os.getenv("OPENAI_API_KEY")
+	if not api_key or OpenAI is None:
+		return build_analytics_answer(question, summary)
+
+	try:
+		client = OpenAI(api_key=api_key)
+		response = client.chat.completions.create(
+			model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+			temperature=0.2,
+			messages=[
+				{
+					"role": "system",
+					"content": (
+						"You are a concise analytics assistant. Use only the provided summary "
+						"data to answer the user's question. If the data is insufficient, "
+						"say so briefly and stick to the numbers you have."
+					),
+				},
+				{
+					"role": "user",
+					"content": f"Question: {question}\nSummary: {json.dumps(summary, separators=(',', ':'))}",
+				},
+			],
+		)
+		content = response.choices[0].message.content
+		if content:
+			return content.strip()
+	except Exception:
+		pass
+
+	return build_analytics_answer(question, summary)
 
 
 @asynccontextmanager
@@ -74,6 +143,13 @@ def get_products():
 @app.get("/analytics/summary")
 def analytics_summary():
 	return get_business_summary()
+
+
+@app.post("/analytics/query")
+def analytics_query(payload: AnalyticsQuery):
+	summary = get_business_summary()
+	answer = get_model_answer(payload.question, summary)
+	return {"answer": answer, "summary": summary}
 
 
 @app.get("/products/{product_id}")
