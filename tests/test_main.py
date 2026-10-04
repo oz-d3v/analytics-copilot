@@ -70,6 +70,20 @@ class ProductEndpointTests(unittest.TestCase):
             },
         )
 
+    def test_returns_business_summary(self):
+        product = {"product_id": self.created_product_id, "name": "Summary Product"}
+        self.client.post("/products", json=product)
+        self.client.post(f"/products/{self.created_product_id}/events", json={"event_type": "view"})
+        self.client.post(f"/products/{self.created_product_id}/events", json={"event_type": "sale"})
+
+        response = self.client.get("/analytics/summary")
+        summary = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertGreaterEqual(summary["total_products"], 2)
+        self.assertGreaterEqual(summary["total_views"], 1)
+        self.assertGreaterEqual(summary["total_sales"], 1)
+
     def test_recorded_events_update_product_metrics(self):
         product = {"product_id": self.created_product_id, "name": "Event Product"}
         self.client.post("/products", json=product)

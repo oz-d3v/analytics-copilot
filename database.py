@@ -94,3 +94,18 @@ def get_product_metrics(product_id: int):
 			(product_id,),
 		)
 		return cursor.fetchone()
+
+
+def get_business_summary():
+	with connect() as connection:
+		cursor = connection.execute(
+			"""
+			SELECT
+				COUNT(DISTINCT products.product_id) AS total_products,
+				COALESCE(SUM(CASE WHEN product_events.event_type = 'view' THEN 1 ELSE 0 END), 0) AS total_views,
+				COALESCE(SUM(CASE WHEN product_events.event_type = 'sale' THEN 1 ELSE 0 END), 0) AS total_sales
+			FROM products
+			LEFT JOIN product_events ON products.product_id = product_events.product_id
+			"""
+		)
+		return cursor.fetchone()

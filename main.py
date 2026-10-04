@@ -9,6 +9,7 @@ from database import (
 	create_product,
 	create_product_event,
 	find_product,
+	get_business_summary,
 	get_product_metrics,
 	initialize_database,
 )
@@ -54,6 +55,12 @@ def post_product_event(product_id: int, event: ProductEventCreate):
 @app.get("/")
 def root():
 	return {"message": "Hello World"}
+
+
+@app.get("/analytics/summary")
+def analytics_summary():
+	return get_business_summary()
+
 
 @app.get("/products/{product_id}")
 def get_product(product_id: int, include_metrics: bool = False):
