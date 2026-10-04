@@ -94,6 +94,40 @@ class ProductEndpointTests(unittest.TestCase):
         self.assertIn("answer", response.json())
         self.assertIn("total_products", response.json()["summary"])
 
+    def test_analytics_query_answers_specific_product_questions(self):
+        product = {"product_id": self.created_product_id, "name": "Performance Product"}
+        self.client.post("/products", json=product)
+        self.client.post(f"/products/{self.created_product_id}/events", json={"event_type": "view"})
+        self.client.post(f"/products/{self.created_product_id}/events", json={"event_type": "sale"})
+
+        response = self.client.post(
+            "/analytics/query",
+            json={"question": f"How is product {self.created_product_id} performing?"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("performing", response.json()["answer"].lower())
+        self.assertIn("view", response.json()["answer"].lower())
+        self.assertIn("sale", response.json()["answer"].lower())
+
+    def test_analytics_query_finds_best_performing_product(self):
+        first = {"product_id": self.created_product_id, "name": "Best Product"}
+        second = {"product_id": self.created_product_id + 1, "name": "Runner Up"}
+        self.client.post("/products", json=first)
+        self.client.post("/products", json=second)
+        self.client.post(f"/products/{self.created_product_id}/events", json={"event_type": "sale"})
+        self.client.post(f"/products/{self.created_product_id}/events", json={"event_type": "sale"})
+        self.client.post(f"/products/{self.created_product_id + 1}/events", json={"event_type": "sale"})
+
+        response = self.client.post(
+            "/analytics/query",
+            json={"question": "Which product has the most sales?"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Best Product", response.json()["answer"])
+        self.assertIn("2 sales", response.json()["answer"])
+
     def test_recorded_events_update_product_metrics(self):
         product = {"product_id": self.created_product_id, "name": "Event Product"}
         self.client.post("/products", json=product)

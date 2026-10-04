@@ -117,3 +117,21 @@ def get_business_summary():
 			"""
 		)
 		return cursor.fetchone()
+
+
+def get_product_performance():
+	with connect() as connection:
+		cursor = connection.execute(
+			"""
+			SELECT
+				products.product_id,
+				products.name,
+				COUNT(*) FILTER (WHERE product_events.event_type = 'view') AS views,
+				COUNT(*) FILTER (WHERE product_events.event_type = 'sale') AS sales
+			FROM products
+			LEFT JOIN product_events ON products.product_id = product_events.product_id
+			GROUP BY products.product_id, products.name
+			ORDER BY products.product_id
+			"""
+		)
+		return cursor.fetchall()

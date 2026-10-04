@@ -23,10 +23,17 @@ const api = {
   query: '/api/analytics/query',
 }
 
+const defaultQuestions = [
+  'Give me an overall summary of product performance',
+  'Which product has the most sales?',
+  'Which product has the most views?',
+  'How is product 1 performing?',
+]
+
 function App() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [products, setProducts] = useState<Product[]>([])
-  const [question, setQuestion] = useState('Give me an overall summary of product performance')
+  const [question, setQuestion] = useState(defaultQuestions[0])
   const [answer, setAnswer] = useState('')
   const [error, setError] = useState('')
 
@@ -111,6 +118,29 @@ function App() {
       <section className="panel ask-panel">
         <div className="panel-header">
           <h2>Ask the analytics assistant</h2>
+        </div>
+
+        <div className="quick-prompts">
+          {defaultQuestions.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              className="quick-prompt"
+              onClick={() => setQuestion(prompt)}
+            >
+              {prompt}
+            </button>
+          ))}
+          {products.map((product) => (
+            <button
+              key={`product-${product.product_id}`}
+              type="button"
+              className="quick-prompt"
+              onClick={() => setQuestion(`How is product ${product.product_id} performing?`)}
+            >
+              {`How is ${product.name} performing?`}
+            </button>
+          ))}
         </div>
 
         <form onSubmit={handleAsk} className="ask-form">
