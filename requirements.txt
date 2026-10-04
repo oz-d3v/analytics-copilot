@@ -1,0 +1,5 @@
+fastapi
+httpx
+psycopg[binary]
+python-dotenv
+uvicorn[standard]
