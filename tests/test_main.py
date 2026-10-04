@@ -18,8 +18,12 @@ class ProductEndpointTests(unittest.TestCase):
     def delete_created_product(self):
         with connect() as connection:
             connection.execute(
-                "DELETE FROM products WHERE product_id = %s",
-                (self.created_product_id,),
+                "DELETE FROM product_events WHERE product_id IN (%s, %s)",
+                (self.created_product_id, self.created_product_id + 1),
+            )
+            connection.execute(
+                "DELETE FROM products WHERE product_id IN (%s, %s)",
+                (self.created_product_id, self.created_product_id + 1),
             )
 
     def test_creates_product_and_returns_it(self):
