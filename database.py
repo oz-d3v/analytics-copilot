@@ -53,6 +53,14 @@ def find_product(product_id: int):
 		return cursor.fetchone()
 
 
+def list_products():
+	with connect() as connection:
+		cursor = connection.execute(
+			"SELECT product_id, name FROM products ORDER BY product_id"
+		)
+		return cursor.fetchall()
+
+
 def create_product(product_id: int, name: str):
 	with connect() as connection:
 		cursor = connection.execute(

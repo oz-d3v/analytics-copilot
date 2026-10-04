@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from psycopg.errors import UniqueViolation
 from pydantic import BaseModel
 
@@ -12,6 +13,7 @@ from database import (
 	get_business_summary,
 	get_product_metrics,
 	initialize_database,
+	list_products,
 )
 
 
@@ -31,6 +33,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.add_middleware(
+	CORSMiddleware,
+	allow_origins=["http://localhost:5173"],
+	allow_credentials=True,
+	allow_methods=["*"],
+	allow_headers=["*"],
+)
 
 
 @app.post("/products", status_code=status.HTTP_201_CREATED)
@@ -55,6 +64,11 @@ def post_product_event(product_id: int, event: ProductEventCreate):
 @app.get("/")
 def root():
 	return {"message": "Hello World"}
+
+
+@app.get("/products")
+def get_products():
+	return list_products()
 
 
 @app.get("/analytics/summary")
